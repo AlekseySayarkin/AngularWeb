@@ -1,1 +1,135 @@
-/* You can add global styles to this file, and also import other style files */
+@import 'https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css';
+@import 'https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css';
+
+body{
+    background:#eee;
+    margin-top:20px;
+}
+.widget {
+    background: #fff;
+    margin-bottom: .75rem;
+    display: block;
+    position: relative;
+    box-shadow: 0 0.46875rem 2.1875rem rgba(90,97,105,0.1), 0 0.9375rem 1.40625rem rgba(90,97,105,0.1), 0 0.25rem 0.53125rem rgba(90,97,105,0.12), 0 0.125rem 0.1875rem rgba(90,97,105,0.1);
+}
+.widget .widget-header,
+.widget-reminder-content,
+.widget-reminder-time,
+a.widget-header-title {
+    padding: 0.625rem;
+}
+.widget-chat-message:after,
+.widget-chat-message:before,
+.widget-reminder-container:after,
+.widget-reminder-container:before {
+    display: table;
+    content: "";
+    clear: both;
+}
+.widget-footer.with-border,
+.widget-reminder-container + .widget-reminder-container {
+    border-top: 1px solid #efeff4;
+}
+.widget-footer.with-bg,
+.widget-header.with-bg {
+    background: #efeff4;
+}
+.widget-header.with-border {
+    border-bottom: 1px solid #efeff4;
+}
+.widget-reminder-header {
+    background: #efeff4;
+    padding: 0.625rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #8a8a8f;
+}
+.widget-reminder-container {
+    position: relative;
+}
+.inverse-mode .widget-reminder-container + .widget-reminder-container {
+    border-color: #333;
+}
+.inverse-mode .widget-reminder-header {
+    background: #212121;
+}
+.widget-reminder-time {
+    width: 5rem;
+    float: left;
+    text-align: right;
+    font-size: 0.625rem;
+}
+.widget-reminder-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 5rem;
+    width: 0.125rem;
+    background: #efeff4;
+}
+.widget-reminder-content {
+    margin-left: 5.125rem;
+}
+.widget-header-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.widget .widget-title, .widget .widget-title a {
+    font-size: .75rem;
+    color: #000;
+    line-height: 1rem;
+}
+.widget .widget-title {
+    font-weight: 600;
+    margin: 0;
+}
+.widget-desc, .widget-desc a {
+    font-size: .6875rem;
+    line-height: 1rem;
+    color: #8A8A8F;
+    font-weight: 500;
+}
+.img-circle {
+    border-radius: 50%;
+}
+
+.pull-left {
+    float: left!important;
+}
+.pull-right {
+    float: right!important;
+}
+.m-t-15 {
+    margin-top: 15px!important;
+}
+
+.m-r-5 {
+    margin-right: 5px!important;
+}
+
+.widget .widget-header, .widget-reminder-content, .widget-reminder-time, a.widget-header-title {
+    padding: .625rem;
+}
+.pagination {
+    overflow: hidden;
+     white-space: nowrap;
+}
+
+.pagination a {
+    color: black;
+    float: left;
+    padding: 8px 16px;
+    text-decoration: none;
+}
+
+.pagination a.active {
+    background-color: #4c82af;
+    color: white;
+    border-radius: 5px;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: #ddd;
+    border-radius: 5px;
+}
