@@ -5,7 +5,7 @@
   <option value="All">All</option>
   <option value="Active">Active</option>
   <option value="Finished">Finished</option>
-  <option value="Postpone">Postponed</option>
+  <option value="Postponed">Postponed</option>
 </select>
 
 <a href="#" (click)="openModal(null, 'add')">add task</a><br/>
@@ -20,6 +20,13 @@
                         <div class="widget-reminder-time">
                             <a href="#" (click)="openModal(task, 'update')">update</a><br/>
                             <a href="#" (click)="openModal(task, 'delete')" style="color: red;">delete</a><br/>
+                            <div *ngIf="task.status.status == 'ACTIVE'">
+                                <a href="#" (click)="onPostpone(task)" style="color: sandybrown;">postpone</a><br/>
+                                <a href="#" (click)="onFinish(task)" style="color: green;">finish</a><br/>
+                            </div>
+                            <div *ngIf="task.status.status == 'POSTPONED'">
+                                <a href="#" (click)="onActive(task)" style="color: green;">activate</a><br/>
+                            </div>
                         </div>
                         <div class="widget-reminder-divider bg-primary"></div>
                         <div class="widget-reminder-content">

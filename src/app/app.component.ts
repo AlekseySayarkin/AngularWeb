@@ -12,6 +12,7 @@ import { AuthRequestComponent } from './core/components/auth-request.component';
 import { SortComponent } from './core/components/sort.component';
 import { PaginationComponent } from './core/components/pagination.component';
 import {DateConstant} from './core/constants/date-constant';
+import {StatusComponent} from './core/components/status.component';
 
 @Component({
   selector: 'app-root',
@@ -32,7 +33,18 @@ export class AppComponent implements OnInit{
   constructor(private taskService: TaskService, private fileService: FileService, private jwtClientService: JwtClientService) {}
 
   public ngOnInit() {
-    this.openModal(null, 'authenticate');
+    this.getJwt();
+    if (this.jwt == null)
+      this.openModal(null, 'authenticate');
+    else
+      this.getTasks();
+  }
+
+  private getJwt(): void {
+    const jwt = new JwtComponent();
+    jwt.jwt = sessionStorage.getItem("jwt");
+    if (jwt.jwt != null)
+      this.jwt = jwt;
   }
 
   public openModal(task: TaskComponent, modalName: string): void {
@@ -65,8 +77,30 @@ export class AppComponent implements OnInit{
       }
     }
 
-    container?.appendChild(button);
+    container.appendChild(button);
     button.click();
+  }
+
+  public onActive(task: TaskComponent) : void {
+    this.changeStatus(task, "ACTIVE")
+  }
+
+  public onFinish(task: TaskComponent) : void {
+    this.changeStatus(task, "FINISHED")
+  }
+
+  public onPostpone(task: TaskComponent): void {
+     this.changeStatus(task, "POSTPONED")
+  }
+
+  private changeStatus(task: TaskComponent, changedStatus: string): void {
+    const status = new StatusComponent();
+    status.status = changedStatus;
+    task.status = status;
+    task.endDate = task.endDate + DateConstant.DATE_CONSTANT_POSTFIX;
+    this.taskService.updateTask(task, this.jwt).subscribe(() => {});
+    task.endDate = task.endDate.substring(0, 10)
+    this.delay(1000).then(() => { this.getTasks() });
   }
 
   public onDeleteFile(): void {
@@ -89,8 +123,8 @@ export class AppComponent implements OnInit{
       (response: string) => {
         this.jwt = new JwtComponent();
         this.jwt.jwt = response;
+        this.saveJwt();
         this.getTasks();
-        this.setPagination();
       },
       () => {
         alert("Error while signing up");
@@ -99,13 +133,21 @@ export class AppComponent implements OnInit{
     );
   }
 
+  private saveJwt(): void {
+    sessionStorage.setItem("jwt", this.jwt.jwt);
+  }
+
   public getTasks(): void {
+    this.setPagination();
     this.taskService.getTasks(this.sort, this.pagination, this.jwt).subscribe(
       (response: TaskComponent[]) => {
         this.tasks = response;
         this.tasks.forEach(t => { t.endDate = t.endDate.substring(0, 10) })
       },
-      (error: HttpErrorResponse) => { alert(error.message); }
+      () => {
+        alert("Unauthorized, please log in")
+        this.openModal(null, 'authenticate');
+      }
     )
   }
 
@@ -113,16 +155,33 @@ export class AppComponent implements OnInit{
     this.taskService.getCount(this.jwt).subscribe(
       (response: number) => {
         this.pagination.count = response;
-        this.pagination.totalPages = Math.floor(((this.pagination.count - 1) / this.pagination.size) + 1);
+        this.pagination.totalPages = Math.floor((this.pagination.count + this.pagination.size - 1) / this.pagination.size);
       },
-      (error: HttpErrorResponse) => { alert(error.message); }
+      (error: HttpErrorResponse) => {
+        if (error.status == 401 || error.status == 403) {
+          alert("Unauthorized, please log in")
+          this.openModal(null, 'authenticate');
+        }
+      }
     );
+  }
+
+  public changePage(page: number): void {
+    if (page <= this.pagination.totalPages && page > 0) {
+      this.pagination.page = page;
+      this.getTasks();
+    }
   }
 
   public onDownloadFile(task: TaskComponent): void {
     this.fileService.getFile(task.id, this.jwt).subscribe(
       (response: Blob) => { saveAs(response, task.file?.name); },
-      (error: HttpErrorResponse) => { alert(error.message); }
+      (error: HttpErrorResponse) => {
+        if (error.status == 401 || error.status == 403) {
+          alert("Unauthorized, please log in")
+          this.openModal(null, 'authenticate');
+        }
+      }
     );
   }
 
@@ -137,9 +196,15 @@ export class AppComponent implements OnInit{
     document.getElementById('close-add-task').click();
 
     this.taskService.addTask(this.extractFromForm(addForm), this.jwt).subscribe(
-      () => {}, (error: HttpErrorResponse) => { alert(error.message); }
+      () => {alert("kek")},
+      (error: HttpErrorResponse) => {
+        if (error.status == 401 || error.status == 403) {
+          alert("Unauthorized, please log in")
+          this.openModal(null, 'authenticate');
+        }
+      }
     );
-    this.getTasks()
+    this.delay(1000).then(() => { this.getTasks() });
   }
 
   private extractFromForm(form: NgForm): TaskComponent {
@@ -173,19 +238,28 @@ export class AppComponent implements OnInit{
       task.file = null;
       this.deleteFile = false;
     }
-    this.taskService.updateTask(task, this.jwt).subscribe(() => {}, (error: HttpErrorResponse) => { alert(error.message); });
+    this.taskService.updateTask(task, this.jwt).subscribe(
+      () => {},
+      (error: HttpErrorResponse) => {
+        if (error.status == 401 || error.status == 403) {
+          alert("Unauthorized, please log in")
+          this.openModal(null, 'authenticate');
+        }
+      }
+    );
     this.delay(1000).then(() => { this.getTasks() });
   }
 
-  public changePage(page: number): void {
-    if (page <= this.pagination.totalPages && page > 0) {
-      this.pagination.page = page;
-      this.getTasks();
-    }
-  }
-
   public onDeleteTask(id: number): void {
-    this.taskService.deleteTask(id, this.jwt);
+    this.taskService.deleteTask(id, this.jwt).subscribe(
+      () => {},
+      (error: HttpErrorResponse) => {
+        if (error.status == 401 || error.status == 403) {
+          alert("Unauthorized, please log in")
+          this.openModal(null, 'authenticate');
+        }
+      }
+    );
     this.delay(1000).then(() => { this.getTasks() });
   }
 

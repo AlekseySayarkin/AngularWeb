@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiBaseUrl: "http://localhost:8080/manager"
+  apiBaseUrl: "http://localhost:8080/manager",
+  authorizationHeader: "Authorization"
 };
 
 /*

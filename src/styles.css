@@ -4,6 +4,7 @@
 body{
     background:#eee;
     margin-top:20px;
+    margin-left: 30%;
 }
 .widget {
     background: #fff;
@@ -112,8 +113,9 @@ a.widget-header-title {
     padding: .625rem;
 }
 .pagination {
+    margin-left: 10%;
     overflow: hidden;
-     white-space: nowrap;
+    white-space: nowrap;
 }
 
 .pagination a {
