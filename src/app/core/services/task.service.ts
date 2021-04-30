@@ -17,8 +17,8 @@ export class TaskService {
 
   public getTasks(sort: SortComponent, pagination: PaginationComponent, jwt:JwtComponent): Observable<TaskComponent[]> {
       const params = new HttpParams()
-      .set('page', pagination.page.toString())
-      .set('size', pagination.size.toString())
+      .set('page', '1')
+      .set('size', "100")
       .set('sortType', sort.sortType)
       .set('sortBy', sort.sortBy)
       .set('status', sort.statusFilter);
@@ -35,14 +35,14 @@ export class TaskService {
   public updateTask(task: TaskComponent, jwt:JwtComponent): Observable<TaskComponent> {
     const headers = new HttpHeaders().set(this.authorizationHeader, jwt.jwt);
     return this.http.put<TaskComponent>(
-      `${this.apiServerUrl}/user/tasks`, TaskService.getFormData(task), { headers }
+      `${this.apiServerUrl}/user/tasks/${task.id}`, TaskService.getFormData(task), { headers }
     );
   }
 
   public addTask(task: TaskComponent, jwt:JwtComponent): Observable<TaskComponent> {
     const headers = new HttpHeaders().set(this.authorizationHeader, jwt.jwt);
     return this.http.post<TaskComponent>(
-      `${this.apiServerUrl}/user/tasks`, TaskService.getFormData(task), { headers }
+      `${this.apiServerUrl}/user/tasks/`, TaskService.getFormData(task), { headers }
     );
   }
 
@@ -52,7 +52,10 @@ export class TaskService {
 
     formData.append('task', taskJson);
     if(task.file != null)
-      formData.append('file', task.file.data, task.file.name);
+      if (task.file.data != null)
+        formData.append('file', task.file.data, task.file.name);
+      else if (task.file.name != null)
+        formData.append('file', new Blob(), task.file.name);
 
     return formData;
   }

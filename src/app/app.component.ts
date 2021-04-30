@@ -19,7 +19,7 @@ import {StatusComponent} from './core/components/status.component';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit{
+export class AppComponent implements OnInit {
 
   public tasks: TaskComponent[];
   public file: FileComponent;
@@ -98,8 +98,8 @@ export class AppComponent implements OnInit{
     status.status = changedStatus;
     task.status = status;
     task.endDate = task.endDate + DateConstant.DATE_CONSTANT_POSTFIX;
-    this.taskService.updateTask(task, this.jwt).subscribe(() => {});
-    task.endDate = task.endDate.substring(0, 10)
+    this.taskService.updateTask(task, this.jwt).subscribe(()=>{});
+    task.endDate = task.endDate.substring(0, 10);
     this.delay(1000).then(() => { this.getTasks() });
   }
 
@@ -138,7 +138,7 @@ export class AppComponent implements OnInit{
   }
 
   public getTasks(): void {
-    this.setPagination();
+    this.getJwt();
     this.taskService.getTasks(this.sort, this.pagination, this.jwt).subscribe(
       (response: TaskComponent[]) => {
         this.tasks = response;
@@ -151,29 +151,8 @@ export class AppComponent implements OnInit{
     )
   }
 
-  public setPagination(): void {
-    this.taskService.getCount(this.jwt).subscribe(
-      (response: number) => {
-        this.pagination.count = response;
-        this.pagination.totalPages = Math.floor((this.pagination.count + this.pagination.size - 1) / this.pagination.size);
-      },
-      (error: HttpErrorResponse) => {
-        if (error.status == 401 || error.status == 403) {
-          alert("Unauthorized, please log in")
-          this.openModal(null, 'authenticate');
-        }
-      }
-    );
-  }
-
-  public changePage(page: number): void {
-    if (page <= this.pagination.totalPages && page > 0) {
-      this.pagination.page = page;
-      this.getTasks();
-    }
-  }
-
   public onDownloadFile(task: TaskComponent): void {
+    this.getJwt();
     this.fileService.getFile(task.id, this.jwt).subscribe(
       (response: Blob) => { saveAs(response, task.file?.name); },
       (error: HttpErrorResponse) => {
@@ -185,18 +164,25 @@ export class AppComponent implements OnInit{
     );
   }
 
-  public loadFile(event: any)  {
-    this.file = new FileComponent();
+  public loadFile(event: any): void{
+    this.getJwt();
     const uploadedFile: File = <File> event.target.files[0];
+    if (uploadedFile.size > 10485760) {
+      alert("File is too big");
+      return;
+    }
+
+    this.file = new FileComponent();
     this.file.name = uploadedFile.name;
     this.file.data = uploadedFile;
   }
 
   public onAddTask(addForm: NgForm): void {
+    this.getJwt();
     document.getElementById('close-add-task').click();
 
     this.taskService.addTask(this.extractFromForm(addForm), this.jwt).subscribe(
-      () => {alert("kek")},
+      () => {},
       (error: HttpErrorResponse) => {
         if (error.status == 401 || error.status == 403) {
           alert("Unauthorized, please log in")
@@ -222,13 +208,18 @@ export class AppComponent implements OnInit{
     else
       task.endDate = this.task.endDate + DateConstant.DATE_CONSTANT_POSTFIX;
 
-    task.file = this.file;
-    this.file = null;
+    if (this.file != null) {
+      task.file = this.file;
+      this.file = null;
+    } else if (this.task?.file != null){
+      task.file = this.task?.file;
+    }
 
     return task;
   }
 
   public onUpdateTask(updateForm: NgForm): void {
+    this.getJwt();
     document.getElementById('close-update-task').click();
 
     const task = this.extractFromForm(updateForm);
@@ -251,6 +242,7 @@ export class AppComponent implements OnInit{
   }
 
   public onDeleteTask(id: number): void {
+    this.getJwt();
     this.taskService.deleteTask(id, this.jwt).subscribe(
       () => {},
       (error: HttpErrorResponse) => {

@@ -43,14 +43,7 @@
     </div>
 </div>
 
-<!-- Pagination -->
-<div class="pagination">
-    <a href="#" (click)="changePage(pagination.page - 1)">&laquo;</a>
-    <div *ngFor="let item of [].constructor(pagination.totalPages); let i = index">
-        <a href="#" [ngClass]="{'active' : i + 1 == pagination.page}" (click)="changePage(i + 1)">{{i + 1}}</a>
-     </div>
-    <a href="#" (click)="changePage(pagination.page + 1)">&raquo;</a>
-</div>
+
 
 <!-- Add Task Modal -->
 <div class="modal fade" id="addTaskModal" tabindex="-1" role="dialog" aria-labelledby="addTaskModalLabel" aria-hidden="true">
@@ -107,6 +100,7 @@
                         <input type="text" name="end_date" ngModel class="form-control" id="end_date" value="{{task?.endDate}}" required>
                     </div>
                     <div *ngIf="hasFile">
+
                       <a href="#" (click)="onDeleteFile()" style="color: red;">deleteFile</a><br/>
                     </div>
                     <div *ngIf="!hasFile">
