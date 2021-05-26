@@ -6,13 +6,11 @@ import { TaskComponent } from './core/components/task.component';
 import { TaskService } from './core/services/task.service';
 import { saveAs } from 'file-saver';
 import { NgForm } from '@angular/forms';
-import { JwtClientService } from './core/services/jwt-client.service';
-import { JwtComponent } from './core/components/jwt.component';
-import { AuthRequestComponent } from './core/components/auth-request.component';
 import { SortComponent } from './core/components/sort.component';
-import { PaginationComponent } from './core/components/pagination.component';
 import {DateConstant} from './core/constants/date-constant';
 import {StatusComponent} from './core/components/status.component';
+import {WebSocketAPI} from './core/services/web-socket-api.service';
+import {Byte} from '@angular/compiler/src/util';
 
 @Component({
   selector: 'app-root',
@@ -24,27 +22,42 @@ export class AppComponent implements OnInit {
   public tasks: TaskComponent[];
   public file: FileComponent;
   public task: TaskComponent;
-  public pagination: PaginationComponent = new PaginationComponent();
   public sort: SortComponent = new SortComponent();
-  private jwt: JwtComponent;
-  public hasFile: Boolean;
-  private deleteFile: Boolean = false;
+  public hasFile: boolean;
+  private deleteFile = false;
+  private filename: string;
 
-  constructor(private taskService: TaskService, private fileService: FileService, private jwtClientService: JwtClientService) {}
+  webSocketAPI: WebSocketAPI;
+  message: any;
+  messageBlob: Byte[];
+  name: string;
 
-  public ngOnInit() {
-    this.getJwt();
-    if (this.jwt == null)
-      this.openModal(null, 'authenticate');
-    else
-      this.getTasks();
+  constructor(private taskService: TaskService, private fileService: FileService) {}
+
+  handleMessage(message): void {
+    if (message !== undefined && message.length > 1000) {
+      saveAs(new Blob([this.base64ToArrayBuffer(message)]), this.filename);
+      return;
+    }
+
+    this.message = message;
+    this.readTasks();
   }
 
-  private getJwt(): void {
-    const jwt = new JwtComponent();
-    jwt.jwt = sessionStorage.getItem("jwt");
-    if (jwt.jwt != null)
-      this.jwt = jwt;
+  base64ToArrayBuffer(base64: any): ArrayBuffer {
+    const binaryString =  window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array( len );
+    for (let i = 0; i < len; i++)        {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  public ngOnInit(): void {
+    this.webSocketAPI = new WebSocketAPI(this);
+    this.webSocketAPI._connect();
+    this.taskService.init(this.webSocketAPI);
   }
 
   public openModal(task: TaskComponent, modalName: string): void {
@@ -55,7 +68,7 @@ export class AppComponent implements OnInit {
     button.style.display = 'none';
     button.setAttribute('data-toggle', 'modal');
 
-    switch(modalName) {
+    switch (modalName) {
       case 'add': {
         button.setAttribute('data-target', '#addTaskModal');
         break;
@@ -75,22 +88,25 @@ export class AppComponent implements OnInit {
         button.setAttribute('data-target', '#authenticateModal');
         break;
       }
+      case 'tasks': {
+        this.getTasks();
+      }
     }
 
     container.appendChild(button);
     button.click();
   }
 
-  public onActive(task: TaskComponent) : void {
-    this.changeStatus(task, "ACTIVE")
+  public onActive(task: TaskComponent): void {
+    this.changeStatus(task, 'ACTIVE');
   }
 
-  public onFinish(task: TaskComponent) : void {
-    this.changeStatus(task, "FINISHED")
+  public onFinish(task: TaskComponent): void {
+    this.changeStatus(task, 'FINISHED');
   }
 
   public onPostpone(task: TaskComponent): void {
-     this.changeStatus(task, "POSTPONED")
+     this.changeStatus(task, 'POSTPONED');
   }
 
   private changeStatus(task: TaskComponent, changedStatus: string): void {
@@ -98,77 +114,43 @@ export class AppComponent implements OnInit {
     status.status = changedStatus;
     task.status = status;
     task.endDate = task.endDate + DateConstant.DATE_CONSTANT_POSTFIX;
-    this.taskService.updateTask(task, this.jwt).subscribe(()=>{});
+    this.taskService.updateTask(task);
     task.endDate = task.endDate.substring(0, 10);
-    this.delay(1000).then(() => { this.getTasks() });
+    this.delay(1000).then(() => { this.getTasks(); });
   }
 
   public onDeleteFile(): void {
     this.deleteFile = true;
   }
 
-  public onChangeStatus(event: any) {
+  public onChangeStatus(event: any): void {
     this.sort.statusFilter = event.target.value;
     this.getTasks();
   }
 
-  public authenticate(authForm: NgForm) {
-    document.getElementById('close-authentication-modal').click();
-
-    const authRequest = new AuthRequestComponent();
-    authRequest.login = authForm.controls['login'].value;
-    authRequest.password = authForm.controls['password'].value;
-
-    this.jwtClientService.generateToken(authRequest).subscribe(
-      (response: string) => {
-        this.jwt = new JwtComponent();
-        this.jwt.jwt = response;
-        this.saveJwt();
-        this.getTasks();
-      },
-      () => {
-        alert("Error while signing up");
-        this.openModal(null, 'authenticate');
-      }
-    );
-  }
-
-  private saveJwt(): void {
-    sessionStorage.setItem("jwt", this.jwt.jwt);
-  }
-
   public getTasks(): void {
-    this.getJwt();
-    this.taskService.getTasks(this.sort, this.pagination, this.jwt).subscribe(
-      (response: TaskComponent[]) => {
-        this.tasks = response;
-        this.tasks.forEach(t => { t.endDate = t.endDate.substring(0, 10) })
-      },
-      () => {
-        alert("Unauthorized, please log in")
-        this.openModal(null, 'authenticate');
-      }
-    )
+    this.taskService.getTasks(this.sort);
+    this.readTasks();
+  }
+
+  private readTasks(): void {
+    if (Array.isArray(this.message)) {
+      this.tasks = this.message;
+      this.tasks.forEach(t => {
+        t.endDate = t.endDate.substring(0, 10);
+      });
+    }
   }
 
   public onDownloadFile(task: TaskComponent): void {
-    this.getJwt();
-    this.fileService.getFile(task.id, this.jwt).subscribe(
-      (response: Blob) => { saveAs(response, task.file?.name); },
-      (error: HttpErrorResponse) => {
-        if (error.status == 401 || error.status == 403) {
-          alert("Unauthorized, please log in")
-          this.openModal(null, 'authenticate');
-        }
-      }
-    );
+    this.fileService.getFile(task.id, this.webSocketAPI);
+    this.filename = task.file.name;
   }
 
   public loadFile(event: any): void{
-    this.getJwt();
-    const uploadedFile: File = <File> event.target.files[0];
+    const uploadedFile: File = event.target.files[0] as File;
     if (uploadedFile.size > 10485760) {
-      alert("File is too big");
+      alert('File is too big');
       return;
     }
 
@@ -178,35 +160,30 @@ export class AppComponent implements OnInit {
   }
 
   public onAddTask(addForm: NgForm): void {
-    this.getJwt();
     document.getElementById('close-add-task').click();
 
-    this.taskService.addTask(this.extractFromForm(addForm), this.jwt).subscribe(
-      () => {},
-      (error: HttpErrorResponse) => {
-        if (error.status == 401 || error.status == 403) {
-          alert("Unauthorized, please log in")
-          this.openModal(null, 'authenticate');
-        }
-      }
-    );
-    this.delay(1000).then(() => { this.getTasks() });
+    this.taskService.addTask(this.extractFromForm(addForm));
+    this.delay(1000).then(() => { this.getTasks(); });
   }
 
   private extractFromForm(form: NgForm): TaskComponent {
     const task = new TaskComponent();
-    const taskName = form.controls['task'].value;
-    const taskEndDate = form.controls['end_date'].value;
+    const taskName = form.controls.task.value;
+    const taskEndDate = form.controls.end_date.value;
 
-    if (taskName != '')
+    if (taskName !== '') {
       task.task = taskName;
-    else
+    }
+    else {
       task.task = this.task.task;
+    }
 
-    if (taskEndDate != '')
+    if (taskEndDate !== '') {
       task.endDate = taskEndDate + DateConstant.DATE_CONSTANT_POSTFIX;
-    else
+    }
+    else {
       task.endDate = this.task.endDate + DateConstant.DATE_CONSTANT_POSTFIX;
+    }
 
     if (this.file != null) {
       task.file = this.file;
@@ -219,7 +196,6 @@ export class AppComponent implements OnInit {
   }
 
   public onUpdateTask(updateForm: NgForm): void {
-    this.getJwt();
     document.getElementById('close-update-task').click();
 
     const task = this.extractFromForm(updateForm);
@@ -229,33 +205,16 @@ export class AppComponent implements OnInit {
       task.file = null;
       this.deleteFile = false;
     }
-    this.taskService.updateTask(task, this.jwt).subscribe(
-      () => {},
-      (error: HttpErrorResponse) => {
-        if (error.status == 401 || error.status == 403) {
-          alert("Unauthorized, please log in")
-          this.openModal(null, 'authenticate');
-        }
-      }
-    );
-    this.delay(1000).then(() => { this.getTasks() });
+    this.taskService.updateTask(task);
+    this.delay(1000).then(() => { this.getTasks(); });
   }
 
   public onDeleteTask(id: number): void {
-    this.getJwt();
-    this.taskService.deleteTask(id, this.jwt).subscribe(
-      () => {},
-      (error: HttpErrorResponse) => {
-        if (error.status == 401 || error.status == 403) {
-          alert("Unauthorized, please log in")
-          this.openModal(null, 'authenticate');
-        }
-      }
-    );
-    this.delay(1000).then(() => { this.getTasks() });
+    this.taskService.deleteTask(id);
+    this.delay(1000).then(() => { this.getTasks(); });
   }
 
-  async delay(ms: number) {
+  async delay(ms: number): Promise<void> {
     await new Promise<void>(resolve => setTimeout(() => resolve(), ms));
   }
 }

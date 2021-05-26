@@ -1,4 +1,4 @@
-import { SortConstant } from "../constants/sort-constant";
+import { SortConstant } from '../constants/sort-constant';
 
 export class SortComponent {
 
